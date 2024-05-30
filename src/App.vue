@@ -1,9 +1,14 @@
 <script setup>
-import {ref,reactive} from 'vue'
+import {ref,reactive, onMounted, watch} from 'vue'
+import {uid}from 'uid'
 import headerItem from './components/header-item.vue';
 import formularioItem from './components/fromulario-item.vue';
 import personaItem from './components/persona-item.vue';
+const muestra=ref(true)
+
+
 const paciente = reactive({
+                id:null,
                 nombre: '',
                 propietario: '',
                 email: '',
@@ -13,22 +18,76 @@ const paciente = reactive({
 const pacientes= ref([])
 
 const guardarPaciente = () => {
-  pacientes.value.push(paciente)
+  if (paciente.id){
+    // tambien su pudo a ver destructurizado
+    // const {id} paciente
+    const i =pacientes.value.findIndex(pacienteStok => pacienteStok.id == paciente.id);
+    pacientes.value[i]={...paciente}
+  }else{
+    pacientes.value.push({
+    ...paciente,
+    id: uid()
+  })
   }
+
+
+
+
+  paciente.nombre = ''
+  paciente.propietario = ''
+  paciente.email = ''
+  paciente.alta=''
+  paciente.sintomas=''
+  paciente.id=null
+  }
+
+const ActualizarPaciente=(id)=>{
+  const pacienteEditar = pacientes.value.find(paciente => paciente.id === id);
+  Object.assign(paciente, pacienteEditar);
+ 
+}
+
+const eliminarPaciente=(id)=>{
+ pacientes.value= pacientes.value.filter(pacienteE => pacienteE.id !== id)
+ 
+}
+onMounted(()=>{
+  const pacienteStorage= localStorage.getItem("pacientes")
+if(pacienteStorage){
+  pacientes.value=JSON.parse(pacienteStorage)
+  console.log(pacientes.value)
+}
+}
+)
+
+watch(pacientes,()=>{
+  guardarLocalStorage()
+},
+{deep:true}
+)
+
+const guardarLocalStorage=()=>{
+  localStorage.setItem("pacientes",JSON.stringify(pacientes.value))
+}
+
 </script>
 
 <template>
   <div class="container mx-auto mt-20">
-    <headerItem/>
+    <headerItem
+    v-if="muestra"
+    />
     <div class="md:flex">
-      
       <formularioItem
       v-model:nombre="paciente.nombre"
       v-model:propietario="paciente.propietario"
       v-model:email="paciente.email"
       v-model:alta="paciente.alta"
       v-model:sintomas="paciente.sintomas"
+      v-model:id="paciente.id"
       @agregar-persona="guardarPaciente"
+      
+
 
       />
       <div class="md:w-1/2 text-xl text-center mt-5 " >
@@ -39,8 +98,10 @@ const guardarPaciente = () => {
         </p>
         <div v-if="pacientes.length>0">
           <personaItem
-            v-for="pacciente in pacientes"
-            :paciente="pacciente"
+            v-for="paciente in pacientes"
+            :paciente="paciente"
+            @actualizar-paciente="ActualizarPaciente"
+            @eliminar-paciente="eliminarPaciente"
             class="text-left"
           />
           
